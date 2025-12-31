@@ -1,0 +1,5 @@
+{
+  "name": "Batch-IMG",
+  "description": "A standalone, client-side batch image compression tool using browser-image-compression and JSZip. Supports drag-and-drop, format conversion (WebP/JPEG), and target file size constraints.",
+  "requestFramePermissions": []
+}

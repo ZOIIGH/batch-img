@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖片壓縮器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- UPNG.js for PNG encoding with quantization -->
+    <script src="https://unpkg.com/pako@2.1.0/dist/pako.min.js"></script>
+    <script src="https://unpkg.com/upng-js@2.1.0/UPNG.js"></script>
+    <!-- JSZip for batch download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#706b64',
+                        primaryHover: '#5a5650',
+                        neoBg: '#e1dfdb',
+                        neoMid: '#c4c1bc',
+                        neoDark: '#a29d96',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --neo-bg: #e1dfdb;
+            --neo-light: #f0eee9;
+            --neo-dark: #706b64;
+            --neo-mid: #c4c1bc;
+            --neo-accent: #a29d96;
+            --glass-bg: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.3);
+        }
+
+        body {
+            background: linear-gradient(145deg, #d8d5d0, #eae7e3);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background blobs */
+        .bg-blobs {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.6;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .blob-1 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #d4a574, #c9956c);
+            top: -100px;
+            right: -100px;
+            animation-delay: 0s;
+        }
+
+        .blob-2 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #e8b88a, #d4a574);
+            bottom: -50px;
+            left: -50px;
+            animation-delay: -5s;
+        }
+
+        .blob-3 {
+            width: 250px;
+            height: 250px;
+            background: linear-gradient(135deg, #c9956c, #b8846b);
+            top: 40%;
+            left: 30%;
+            animation-delay: -10s;
+        }
+
+        .blob-4 {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, #e0a87a, #d4a574);
+            top: 20%;
+            right: 20%;
+            animation-delay: -15s;
+        }
+
+        .blob-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 30px solid;
+            border-color: rgba(212, 165, 116, 0.4);
+            filter: blur(20px);
+            animation: rotate 30s linear infinite;
+        }
+
+        .ring-1 {
+            width: 200px;
+            height: 200px;
+            top: 15%;
+            left: 10%;
+        }
+
+        .ring-2 {
+            width: 150px;
+            height: 150px;
+            bottom: 20%;
+            right: 15%;
+            animation-direction: reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -30px) scale(1.05); }
+            50% { transform: translate(-20px, 20px) scale(0.95); }
+            75% { transform: translate(20px, 30px) scale(1.02); }
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .bg-blobs.hidden {
+            display: none;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(225, 223, 219, 0.5); }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(112, 107, 100, 0.3);
+            border-radius: 4px;
+            backdrop-filter: blur(10px);
+        }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(112, 107, 100, 0.5); }
+
+        /* Glassmorphism card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow:
+                0 8px 32px rgba(112, 107, 100, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+
+        /* Glassmorphism inset */
+        .glass-inset {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow:
+                inset 0 2px 4px rgba(0, 0, 0, 0.05),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        /* Glassmorphism button */
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            box-shadow:
+                0 4px 16px rgba(112, 107, 100, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: #706b64;
+        }
+
+        .glass-btn:hover {
+            background: rgba(255, 255, 255, 0.35);
+            box-shadow:
+                0 6px 20px rgba(112, 107, 100, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .glass-btn:active {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(0);
+            box-shadow:
+                0 2px 8px rgba(112, 107, 100, 0.15),
+                inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Glass primary button */
+        .glass-btn-primary {
+            background: linear-gradient(135deg, rgba(112, 107, 100, 0.8), rgba(138, 132, 124, 0.8));
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow:
+                0 4px 16px rgba(112, 107, 100, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .glass-btn-primary:hover {
+            background: linear-gradient(135deg, rgba(90, 86, 80, 0.9), rgba(112, 107, 100, 0.9));
+            box-shadow:
+                0 6px 24px rgba(112, 107, 100, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        }
+
+        .glass-btn-primary:active {
+            background: linear-gradient(135deg, rgba(74, 70, 64, 0.95), rgba(90, 86, 80, 0.95));
+        }
+
+        .glass-btn-pressed {
+            background: rgba(255, 255, 255, 0.15) !important;
+            transform: translateY(0) !important;
+            box-shadow:
+                inset 0 2px 6px rgba(0, 0, 0, 0.1),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.2) !important;
+        }
+
+        /* Glass input */
+        .glass-input {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            color: #706b64;
+        }
+
+        .glass-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(112, 107, 100, 0.4);
+            box-shadow:
+                inset 0 2px 4px rgba(0, 0, 0, 0.05),
+                0 0 0 3px rgba(112, 107, 100, 0.1);
+        }
+
+        .glass-input::placeholder {
+            color: rgba(112, 107, 100, 0.5);
+        }
+
+        /* Glass select */
+        .glass-select {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+            color: #706b64;
+            cursor: pointer;
+        }
+
+        .glass-select:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(112, 107, 100, 0.4);
+        }
+
+        /* Glass checkbox */
+        .glass-checkbox {
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .glass-checkbox:checked {
+            background: linear-gradient(135deg, rgba(112, 107, 100, 0.8), rgba(138, 132, 124, 0.8));
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .glass-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        /* Glass icon container */
+        .glass-icon {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 12px rgba(112, 107, 100, 0.1);
+        }
+
+        /* Glass progress bar */
+        .glass-progress-track {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .glass-progress-bar {
+            background: linear-gradient(90deg, rgba(112, 107, 100, 0.8), rgba(162, 157, 150, 0.8));
+            border-radius: 50px;
+            box-shadow: 0 2px 8px rgba(112, 107, 100, 0.3);
+        }
+
+        /* Glass dropzone */
+        .glass-dropzone {
+            background: transparent;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            border-radius: 24px;
+            border: none;
+            box-shadow: none;
+            transition: all 0.3s ease;
+        }
+
+        .glass-dropzone:hover, .drag-active {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            box-shadow: none;
+        }
+
+        /* Glass header */
+        .glass-header {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 4px 20px rgba(112, 107, 100, 0.1);
+        }
+
+        /* Glass badge */
+        .glass-badge {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 2px 8px rgba(112, 107, 100, 0.08);
+        }
+
+        /* Glass range slider */
+        .glass-range {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .glass-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(240, 238, 233, 0.9));
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow:
+                0 2px 8px rgba(112, 107, 100, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .glass-range::-webkit-slider-thumb:hover {
+            background: linear-gradient(135deg, rgba(112, 107, 100, 0.8), rgba(138, 132, 124, 0.8));
+            transform: scale(1.1);
+        }
+
+        /* Glass color input */
+        .glass-color {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            border: none;
+            padding: 4px;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 2px 8px rgba(112, 107, 100, 0.1);
+            cursor: pointer;
+        }
+
+        .glass-color::-webkit-color-swatch-wrapper {
+            padding: 4px;
+        }
+
+        .glass-color::-webkit-color-swatch {
+            border-radius: 6px;
+            border: none;
+        }
+
+        .checkerboard {
+            background-image:
+                linear-gradient(45deg, rgba(112, 107, 100, 0.1) 25%, transparent 25%),
+                linear-gradient(-45deg, rgba(112, 107, 100, 0.1) 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, rgba(112, 107, 100, 0.1) 75%),
+                linear-gradient(-45deg, transparent 75%, rgba(112, 107, 100, 0.1) 75%);
+            background-size: 16px 16px;
+            background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+        }
+
+        /* Small glass inputs */
+        .glass-input-sm {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #706b64;
+        }
+
+        /* Status badges */
+        .glass-badge-success {
+            background: linear-gradient(135deg, rgba(168, 197, 168, 0.7), rgba(143, 184, 143, 0.7));
+            color: #3d5a3d;
+            border-color: rgba(168, 197, 168, 0.5);
+        }
+
+        .glass-badge-warning {
+            background: linear-gradient(135deg, rgba(212, 197, 168, 0.7), rgba(201, 184, 150, 0.7));
+            color: #6b5c3d;
+            border-color: rgba(212, 197, 168, 0.5);
+        }
+
+        /* Toggle switch for background */
+        .toggle-switch {
+            position: relative;
+            width: 56px;
+            height: 28px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #fff, #f0eee9);
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: linear-gradient(135deg, rgba(112, 107, 100, 0.7), rgba(138, 132, 124, 0.7));
+        }
+
+        .toggle-switch.active::after {
+            left: 31px;
+        }
+
+        /* Main content wrapper */
+        .main-content {
+            position: relative;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body class="font-sans min-h-screen" style="color: #706b64;">
+
+    <!-- Animated Background Blobs -->
+    <div id="bgBlobs" class="bg-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+        <div class="blob blob-4"></div>
+        <div class="blob-ring ring-1"></div>
+        <div class="blob-ring ring-2"></div>
+    </div>
+
+    <!-- Main Content Wrapper -->
+    <div class="main-content">
+
+    <!-- Header -->
+    <nav class="glass-header sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="glass-icon w-10 h-10 flex items-center justify-center">
+                    <svg class="w-6 h-6" style="color: #706b64;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold" style="color: #706b64;">圖片壓縮器</h1>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm" style="color: #a29d96;">背景動畫</span>
+                    <div id="bgToggle" class="toggle-switch active" onclick="toggleBackground()"></div>
+                </div>
+                <div class="glass-badge text-sm px-4 py-2 hidden md:block" style="color: #a29d96;">圖片不上傳伺服器，完全在瀏覽器處理</div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-4 py-6">
+        <!-- Settings Panel -->
+        <div class="glass-card p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" style="color: #706b64;">
+                <div class="glass-icon w-8 h-8 flex items-center justify-center">
+                    <svg class="w-5 h-5" style="color: #706b64;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </div>
+                壓縮設定
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <!-- Output Size (Editable) -->
+                <div>
+                    <label class="block text-sm font-medium mb-2" style="color: #a29d96;">輸出尺寸 (寬 × 高 px)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="outputWidth" value="800" min="100" max="4096"
+                               class="glass-input block w-full py-2.5 px-4">
+                        <span class="font-medium" style="color: #c4c1bc;">×</span>
+                        <input type="number" id="outputHeight" value="800" min="100" max="4096"
+                               class="glass-input block w-full py-2.5 px-4">
+                    </div>
+                </div>
+
+                <!-- Output Format -->
+                <div>
+                    <label class="block text-sm font-medium mb-2" style="color: #a29d96;">輸出格式</label>
+                    <select id="outputFormat" class="glass-select block w-full py-2.5 pl-4 pr-10">
+                        <option value="png">PNG (無損/透明)</option>
+                        <option value="jpg">JPG (通用相片)</option>
+                    </select>
+                </div>
+
+                <!-- Target Size -->
+                <div>
+                    <label for="targetSize" class="block text-sm font-medium mb-2" style="color: #a29d96;">目標大小上限</label>
+                    <div class="relative">
+                        <input type="number" id="targetSize" value="300" min="50" max="1000"
+                               class="glass-input block w-full py-2.5 pl-4 pr-12">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium" style="color: #c4c1bc;">KB</span>
+                    </div>
+                </div>
+
+                <!-- Fitting Mode -->
+                <div>
+                    <label class="block text-sm font-medium mb-2" style="color: #a29d96;">填充模式</label>
+                    <select id="fittingMode" class="glass-select block w-full py-2.5 pl-4 pr-10">
+                        <option value="contain">Contain (留白，完整顯示)</option>
+                        <option value="cover">Cover (滿版裁切)</option>
+                    </select>
+                </div>
+
+                <!-- Content Size -->
+                <div>
+                    <label for="contentSize" class="block text-sm font-medium mb-2" style="color: #a29d96;">內容佔比 (Contain)</label>
+                    <div class="relative">
+                        <input type="number" id="contentSize" value="750" min="100" max="4096"
+                               class="glass-input block w-full py-2.5 pl-4 pr-12">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium" style="color: #c4c1bc;">px</span>
+                    </div>
+                    <p class="text-xs mt-2" style="color: #c4c1bc;">Contain 模式下圖片內容的最大尺寸</p>
+                </div>
+            </div>
+
+            <!-- Transparency Settings (PNG only) -->
+            <div id="pngSettings" class="mt-6 pt-6" style="border-top: 1px solid rgba(196, 193, 188, 0.3);">
+                <div class="flex flex-wrap items-center gap-4">
+                    <label class="inline-flex items-center gap-3">
+                        <input type="checkbox" id="removeAlpha" class="glass-checkbox">
+                        <span class="text-sm" style="color: #706b64;">強制移除透明（填充底色）</span>
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm" style="color: #a29d96;">底色：</label>
+                        <input type="color" id="bgColor" value="#FFFFFF" class="glass-color">
+                        <span id="bgColorHex" class="text-xs font-mono glass-badge px-2 py-1" style="color: #a29d96;">#FFFFFF</span>
+                    </div>
+                    <div class="glass-inset text-xs px-4 py-2" style="color: #8f7c5c;">
+                        提示：透明 PNG 難以壓縮，建議填充底色
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quality Settings (PNG only) -->
+            <div id="pngQualitySettings" class="mt-6 pt-6" style="border-top: 1px solid rgba(196, 193, 188, 0.3);">
+                <div class="flex flex-wrap items-center gap-4">
+                    <label class="text-sm font-medium" style="color: #a29d96;">PNG 量化品質範圍：</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="qualityMin" value="70" min="10" max="100"
+                               class="glass-input-sm w-16 py-1.5 px-3 text-sm text-center">
+                        <span style="color: #c4c1bc;">~</span>
+                        <input type="number" id="qualityMax" value="95" min="10" max="100"
+                               class="glass-input-sm w-16 py-1.5 px-3 text-sm text-center">
+                    </div>
+                    <label class="text-sm" style="color: #a29d96;">抖動強度：</label>
+                    <input type="range" id="dithering" min="0" max="100" value="80" class="glass-range w-24">
+                    <span id="ditheringValue" class="glass-badge text-xs px-2 py-1" style="color: #a29d96;">0.8</span>
+                </div>
+            </div>
+
+            <!-- Quality Settings (JPG only) -->
+            <div id="jpgQualitySettings" class="hidden mt-6 pt-6" style="border-top: 1px solid rgba(196, 193, 188, 0.3);">
+                <div class="flex flex-wrap items-center gap-4">
+                    <label class="text-sm font-medium" style="color: #a29d96;">JPG 品質：</label>
+                    <input type="range" id="jpgQuality" min="50" max="100" value="85" class="glass-range w-48">
+                    <span id="jpgQualityValue" class="glass-badge text-sm font-medium px-3 py-1" style="color: #706b64;">85%</span>
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm" style="color: #a29d96;">背景色：</label>
+                        <input type="color" id="jpgBgColor" value="#FFFFFF" class="glass-color">
+                        <span id="jpgBgColorHex" class="text-xs font-mono glass-badge px-2 py-1" style="color: #a29d96;">#FFFFFF</span>
+                    </div>
+                    <div class="glass-inset text-xs px-4 py-2" style="color: #a29d96;">
+                        JPG 不支援透明，會自動填充背景色
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Zone -->
+        <div id="dropzone" class="glass-dropzone relative group cursor-pointer flex flex-col items-center justify-center w-full h-48">
+            <input id="fileInput" type="file" multiple accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+            <div class="text-center pointer-events-none">
+                <div class="glass-icon w-14 h-14 mx-auto flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <svg class="w-7 h-7" style="color: #706b64;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                </div>
+                <p class="font-semibold" style="color: #706b64;">點擊上傳</p>
+                <p class="mt-1" style="color: #a29d96; font-size: 0.525rem;">支援 JPG, PNG, WebP（可多選）</p>
+            </div>
+        </div>
+
+        <!-- Progress -->
+        <div id="progressSection" class="hidden mt-6">
+            <div class="flex justify-between items-center mb-3">
+                <span id="progressText" class="text-sm font-medium" style="color: #706b64;">處理中...</span>
+                <span id="progressPercent" class="glass-badge text-sm font-semibold px-3 py-1" style="color: #706b64;">0%</span>
+            </div>
+            <div class="glass-progress-track w-full h-3 overflow-hidden">
+                <div id="progressBar" class="glass-progress-bar h-3 transition-all duration-300" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="resultsSection" class="hidden mt-6">
+            <div class="glass-card overflow-hidden">
+                <div class="px-6 py-4 flex justify-between items-center" style="border-bottom: 1px solid rgba(196, 193, 188, 0.3);">
+                    <h3 class="font-semibold" style="color: #706b64;">壓縮結果</h3>
+                    <div class="flex items-center gap-3">
+                        <span id="statsLabel" class="glass-badge text-xs font-semibold px-3 py-1.5" style="color: #706b64;">0 張圖片</span>
+                        <button id="downloadAllBtn" class="glass-btn glass-btn-primary text-sm py-2.5 px-5 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            下載全部 (.zip)
+                        </button>
+                    </div>
+                </div>
+                <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+                    <!-- Results will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Notes -->
+        <div class="mt-8 glass-card p-6">
+            <h3 class="font-semibold mb-4 flex items-center gap-2" style="color: #706b64;">
+                <div class="glass-icon w-8 h-8 flex items-center justify-center">
+                    <svg class="w-5 h-5" style="color: #706b64;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                技術說明 / 使用建議
+            </h3>
+            <div class="grid md:grid-cols-3 gap-4 text-sm">
+                <div class="glass-inset p-4">
+                    <div class="font-semibold mb-2" style="color: #706b64;">電商商品圖</div>
+                    <ul class="list-disc list-inside space-y-1 text-xs" style="color: #a29d96;">
+                        <li>建議：白底、Contain 模式</li>
+                        <li>內容佔比：700-750px</li>
+                        <li>品質範圍：75-90</li>
+                        <li>預期大小：80-200KB</li>
+                    </ul>
+                </div>
+                <div class="glass-inset p-4">
+                    <div class="font-semibold mb-2" style="color: #706b64;">人物照片</div>
+                    <ul class="list-disc list-inside space-y-1 text-xs" style="color: #a29d96;">
+                        <li>建議：Cover 模式（滿版）</li>
+                        <li>抖動強度：0.7-0.9</li>
+                        <li>品質範圍：70-85</li>
+                        <li>預期大小：150-280KB</li>
+                    </ul>
+                </div>
+                <div class="glass-inset p-4">
+                    <div class="font-semibold mb-2" style="color: #706b64;">去背圖（透明）</div>
+                    <ul class="list-disc list-inside space-y-1 text-xs" style="color: #a29d96;">
+                        <li>難度最高：Alpha 增加檔案大小</li>
+                        <li>建議開啟「強制白底」</li>
+                        <li>若必須保留透明：品質降至 60-75</li>
+                        <li>物理限制：複雜透明難壓縮</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    </div> <!-- End of main-content wrapper -->
+
+    <script>
+    // ============================================================
+    // PNG Compressor - Professional Grade Engine
+    // ============================================================
+    //
+    // 壓縮策略：
+    // PNG:
+    // 1. PNG-24 無損壓縮 (UPNG.encode with cnum=0)
+    // 2. 若超標：PNG 量化壓縮 (UPNG.encode with cnum=256, 二分搜尋最佳品質)
+    // 3. 若透明導致超標：Fallback 填底色
+    // 4. 若仍超標：輕微模糊後再壓縮
+    //
+    // JPG:
+    // 1. 使用 Canvas toBlob 轉換為 JPEG
+    // 2. 自動填充背景色（JPG 不支援透明）
+    // 3. 二分搜尋最佳品質參數
+    //
+    // UPNG.js 選型理由：
+    // - 純 JS，無 WASM 依賴，更好的相容性
+    // - 支援量化壓縮 (類似 pngquant)
+    // - 支援 APNG 和 PNG-24/PNG-8
+    // - 壓縮品質接近 pngquant
+    // ============================================================
+
+    // ============================================================
+    // Core Image Processing Module
+    // ============================================================
+    const ImageProcessor = {
+        /**
+         * 載入圖片為 ImageBitmap (高效能)
+         */
+        async loadImage(file) {
+            return createImageBitmap(file);
+        },
+
+        /**
+         * 建立指定尺寸 Canvas 並套用 fitting 模式
+         * @param {ImageBitmap} img - 來源圖片
+         * @param {number} outputWidth - 輸出寬度
+         * @param {number} outputHeight - 輸出高度
+         * @param {string} mode - 'contain' 或 'cover'
+         * @param {number} contentSize - contain 模式下的內容尺寸
+         * @param {string|null} bgColor - 背景色 (null 為透明)
+         */
+        createCanvas(img, outputWidth, outputHeight, mode = 'contain', contentSize = 750, bgColor = null) {
+            const canvas = document.createElement('canvas');
+            canvas.width = outputWidth;
+            canvas.height = outputHeight;
+            const ctx = canvas.getContext('2d', {
+                willReadFrequently: true,
+                colorSpace: 'srgb'  // 確保 sRGB 色彩空間
+            });
+
+            // 填充背景
+            if (bgColor) {
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(0, 0, outputWidth, outputHeight);
+            }
+
+            const srcW = img.width;
+            const srcH = img.height;
+            let dx, dy, dw, dh, sx = 0, sy = 0, sw = srcW, sh = srcH;
+
+            if (mode === 'contain') {
+                // Contain: 完整顯示，置中，可能留白
+                const targetArea = Math.min(contentSize, outputWidth, outputHeight);
+                const scale = Math.min(targetArea / srcW, targetArea / srcH);
+                dw = Math.round(srcW * scale);
+                dh = Math.round(srcH * scale);
+                dx = Math.round((outputWidth - dw) / 2);
+                dy = Math.round((outputHeight - dh) / 2);
+            } else {
+                // Cover: 滿版裁切
+                const scale = Math.max(outputWidth / srcW, outputHeight / srcH);
+                const scaledW = srcW * scale;
+                const scaledH = srcH * scale;
+
+                // 計算裁切區域 (從來源)
+                if (scaledW > outputWidth) {
+                    sw = outputWidth / scale;
+                    sx = (srcW - sw) / 2;
+                }
+                if (scaledH > outputHeight) {
+                    sh = outputHeight / scale;
+                    sy = (srcH - sh) / 2;
+                }
+                dx = 0; dy = 0;
+                dw = outputWidth;
+                dh = outputHeight;
+            }
+
+            // 高品質縮放設定
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+
+            // 繪製圖片
+            ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+
+            return canvas;
+        },
+
+        /**
+         * 檢測圖片是否包含透明像素
+         */
+        hasTransparency(canvas) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            for (let i = 3; i < data.length; i += 4) {
+                if (data[i] < 255) return true;
+            }
+            return false;
+        },
+
+        /**
+         * 將透明區域填充為指定顏色
+         */
+        fillTransparency(canvas, color = '#FFFFFF') {
+            const newCanvas = document.createElement('canvas');
+            newCanvas.width = canvas.width;
+            newCanvas.height = canvas.height;
+            const ctx = newCanvas.getContext('2d', { colorSpace: 'srgb' });
+
+            // 先填底色
+            ctx.fillStyle = color;
+            ctx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+
+            // 再繪製原圖
+            ctx.drawImage(canvas, 0, 0);
+
+            return newCanvas;
+        },
+
+        /**
+         * 輕微模糊處理（降低複雜度以利壓縮）
+         */
+        applyLightBlur(canvas, radius = 0.5) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+
+            tempCtx.filter = `blur(${radius}px)`;
+            tempCtx.drawImage(canvas, 0, 0);
+
+            return tempCanvas;
+        },
+
+        /**
+         * 計算圖片複雜度 (用於預估壓縮難度)
+         */
+        calculateComplexity(canvas) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            // 統計唯一顏色數量 (取樣)
+            const colorSet = new Set();
+            const step = 4; // 取樣步長
+
+            for (let i = 0; i < data.length; i += 4 * step) {
+                const r = Math.floor(data[i] / 8);
+                const g = Math.floor(data[i + 1] / 8);
+                const b = Math.floor(data[i + 2] / 8);
+                const a = Math.floor(data[i + 3] / 32);
+                colorSet.add(`${r},${g},${b},${a}`);
+            }
+
+            return {
+                uniqueColors: colorSet.size,
+                complexity: colorSet.size > 5000 ? 'high' :
+                           colorSet.size > 2000 ? 'medium' : 'low'
+            };
+        }
+    };
+
+    // ============================================================
+    // PNG Compression Engine
+    // ============================================================
+    const PNGCompressor = {
+        /**
+         * 將 Canvas 轉為 RGBA 陣列
+         */
+        canvasToRGBA(canvas) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            return imageData.data;
+        },
+
+        /**
+         * PNG-24 無損壓縮
+         */
+        encodeLossless(canvas) {
+            const rgba = this.canvasToRGBA(canvas);
+            // cnum=0 表示無損 PNG-24
+            const pngData = UPNG.encode([rgba.buffer], canvas.width, canvas.height, 0);
+            return new Uint8Array(pngData);
+        },
+
+        /**
+         * PNG 量化壓縮 (類似 pngquant)
+         * @param {HTMLCanvasElement} canvas
+         * @param {number} colors - 色數 (2-256)
+         */
+        encodeQuantized(canvas, colors = 256) {
+            const rgba = this.canvasToRGBA(canvas);
+            // cnum > 0 表示量化到指定色數
+            const pngData = UPNG.encode([rgba.buffer], canvas.width, canvas.height, colors);
+            return new Uint8Array(pngData);
+        },
+
+        /**
+         * 二分搜尋最佳色數以達到目標大小
+         * @param {HTMLCanvasElement} canvas
+         * @param {number} targetBytes - 目標大小 (bytes)
+         * @param {number} minColors - 最小色數
+         * @param {number} maxColors - 最大色數
+         */
+        async findOptimalColors(canvas, targetBytes, minColors = 16, maxColors = 256) {
+            let bestResult = null;
+            let bestColors = maxColors;
+
+            // 先嘗試最高品質
+            let result = this.encodeQuantized(canvas, maxColors);
+            if (result.length <= targetBytes) {
+                return { data: result, colors: maxColors, strategy: `PNG-量化 ${maxColors}色` };
+            }
+
+            // 二分搜尋
+            let low = minColors;
+            let high = maxColors;
+
+            while (low <= high) {
+                const mid = Math.floor((low + high) / 2);
+                result = this.encodeQuantized(canvas, mid);
+
+                if (result.length <= targetBytes) {
+                    bestResult = result;
+                    bestColors = mid;
+                    low = mid + 1; // 嘗試更高品質
+                } else {
+                    high = mid - 1; // 需要更低色數
+                }
+            }
+
+            if (bestResult) {
+                return { data: bestResult, colors: bestColors, strategy: `PNG-量化 ${bestColors}色` };
+            }
+
+            // 即使最低色數也超標，返回最小結果
+            result = this.encodeQuantized(canvas, minColors);
+            return {
+                data: result,
+                colors: minColors,
+                strategy: `PNG-量化 ${minColors}色 (未達標)`,
+                exceeded: true
+            };
+        }
+    };
+
+    // ============================================================
+    // JPEG Compression Engine
+    // ============================================================
+    const JPEGCompressor = {
+        /**
+         * Canvas 轉 JPEG Blob
+         */
+        canvasToJPEG(canvas, quality = 0.85) {
+            return new Promise((resolve) => {
+                canvas.toBlob((blob) => resolve(blob), 'image/jpeg', quality);
+            });
+        },
+
+        /**
+         * 二分搜尋最佳 JPEG 品質
+         */
+        async findOptimalQuality(canvas, targetBytes, minQuality = 0.5, maxQuality = 1.0) {
+            let bestResult = null;
+            let bestQuality = maxQuality;
+
+            // 先嘗試最高品質
+            let blob = await this.canvasToJPEG(canvas, maxQuality);
+            if (blob.size <= targetBytes) {
+                return {
+                    data: new Uint8Array(await blob.arrayBuffer()),
+                    quality: maxQuality,
+                    strategy: `JPEG q${Math.round(maxQuality * 100)}`
+                };
+            }
+
+            // 二分搜尋
+            let low = minQuality;
+            let high = maxQuality;
+            const precision = 0.05; // 精度
+
+            while (high - low > precision) {
+                const mid = (low + high) / 2;
+                blob = await this.canvasToJPEG(canvas, mid);
+
+                if (blob.size <= targetBytes) {
+                    bestResult = blob;
+                    bestQuality = mid;
+                    low = mid; // 嘗試更高品質
+                } else {
+                    high = mid; // 需要更低品質
+                }
+            }
+
+            if (bestResult) {
+                return {
+                    data: new Uint8Array(await bestResult.arrayBuffer()),
+                    quality: bestQuality,
+                    strategy: `JPEG q${Math.round(bestQuality * 100)}`
+                };
+            }
+
+            // 即使最低品質也超標，返回最小結果
+            blob = await this.canvasToJPEG(canvas, minQuality);
+            return {
+                data: new Uint8Array(await blob.arrayBuffer()),
+                quality: minQuality,
+                strategy: `JPEG q${Math.round(minQuality * 100)} (未達標)`,
+                exceeded: true
+            };
+        }
+    };
+
+    // ============================================================
+    // Main Compression Pipeline
+    // ============================================================
+    const CompressionPipeline = {
+        /**
+         * 完整壓縮流程
+         */
+        async compress(file, options = {}) {
+            const {
+                outputWidth = 800,
+                outputHeight = 800,
+                targetKB = 300,
+                outputFormat = 'png',
+                fittingMode = 'contain',
+                contentSize = 750,
+                removeAlpha = false,
+                bgColor = '#FFFFFF',
+                qualityMin = 70,
+                qualityMax = 95,
+                jpgQuality = 0.85,
+                jpgBgColor = '#FFFFFF',
+                dithering = 0.8
+            } = options;
+
+            const targetBytes = targetKB * 1024;
+            const steps = [];
+            let currentCanvas;
+            let finalResult = null;
+
+            try {
+                // Step 1: 載入圖片
+                steps.push({ step: 'load', status: 'processing' });
+                const img = await ImageProcessor.loadImage(file);
+                steps[steps.length - 1].status = 'done';
+
+                // Step 2: 建立 Canvas (套用 fitting)
+                steps.push({ step: 'resize', status: 'processing' });
+                // JPG 格式強制填充背景色
+                const useBgColor = (outputFormat === 'jpg') ? jpgBgColor : (removeAlpha ? bgColor : null);
+                currentCanvas = ImageProcessor.createCanvas(img, outputWidth, outputHeight, fittingMode, contentSize, useBgColor);
+                steps[steps.length - 1].status = 'done';
+
+                // 根據輸出格式選擇壓縮策略
+                if (outputFormat === 'jpg') {
+                    return await this.compressAsJPEG(currentCanvas, targetBytes, jpgQuality, steps, outputWidth, outputHeight);
+                } else {
+                    return await this.compressAsPNG(currentCanvas, targetBytes, removeAlpha, bgColor, qualityMin, qualityMax, steps, outputWidth, outputHeight);
+                }
+
+            } catch (error) {
+                console.error('Compression error:', error);
+                throw error;
+            }
+        },
+
+        /**
+         * JPEG 壓縮流程
+         */
+        async compressAsJPEG(canvas, targetBytes, initialQuality, steps, outputWidth, outputHeight) {
+            steps.push({ step: 'jpeg-compress', status: 'processing' });
+
+            const result = await JPEGCompressor.findOptimalQuality(canvas, targetBytes, 0.5, initialQuality);
+
+            steps[steps.length - 1].status = 'done';
+            steps[steps.length - 1].size = result.data.length;
+
+            const exceeded = result.data.length > targetBytes;
+            return {
+                data: result.data,
+                size: result.data.length,
+                strategy: result.strategy,
+                hasAlpha: false,
+                exceeded,
+                exceedReason: exceeded ? 'JPEG 格式物理限制' : null,
+                dimensions: { width: outputWidth, height: outputHeight },
+                format: 'jpg',
+                steps
+            };
+        },
+
+        /**
+         * PNG 壓縮流程
+         */
+        async compressAsPNG(currentCanvas, targetBytes, removeAlpha, bgColor, qualityMin, qualityMax, steps, outputWidth, outputHeight) {
+            // 分析圖片特性
+            const hasAlpha = !removeAlpha && ImageProcessor.hasTransparency(currentCanvas);
+            const complexity = ImageProcessor.calculateComplexity(currentCanvas);
+
+            // Step 3: 嘗試 PNG-24 無損壓縮
+            steps.push({ step: 'lossless', status: 'processing' });
+            let pngData = PNGCompressor.encodeLossless(currentCanvas);
+            steps[steps.length - 1].status = 'done';
+            steps[steps.length - 1].size = pngData.length;
+
+            if (pngData.length <= targetBytes) {
+                return {
+                    data: pngData,
+                    size: pngData.length,
+                    strategy: 'PNG-24 無損',
+                    hasAlpha,
+                    dimensions: { width: outputWidth, height: outputHeight },
+                    format: 'png',
+                    steps
+                };
+            }
+
+            // Step 4: PNG 量化壓縮 (二分搜尋最佳品質)
+            steps.push({ step: 'quantize', status: 'processing' });
+            const minColors = Math.round(16 + (qualityMin / 100) * 48);  // 16-64
+            const maxColors = Math.round(64 + (qualityMax / 100) * 192); // 64-256
+
+            const quantResult = await PNGCompressor.findOptimalColors(
+                currentCanvas,
+                targetBytes,
+                minColors,
+                maxColors
+            );
+            steps[steps.length - 1].status = 'done';
+            steps[steps.length - 1].size = quantResult.data.length;
+            steps[steps.length - 1].colors = quantResult.colors;
+
+            if (quantResult.data.length <= targetBytes) {
+                return {
+                    data: quantResult.data,
+                    size: quantResult.data.length,
+                    strategy: quantResult.strategy,
+                    hasAlpha,
+                    dimensions: { width: outputWidth, height: outputHeight },
+                    format: 'png',
+                    steps
+                };
+            }
+
+            // Step 5: Fallback - 如果有透明，嘗試填底色
+            if (hasAlpha && !removeAlpha) {
+                steps.push({ step: 'fallback-white', status: 'processing' });
+                const opaqueCanvas = ImageProcessor.fillTransparency(currentCanvas, bgColor);
+
+                const opaqueResult = await PNGCompressor.findOptimalColors(
+                    opaqueCanvas,
+                    targetBytes,
+                    minColors,
+                    maxColors
+                );
+                steps[steps.length - 1].status = 'done';
+                steps[steps.length - 1].size = opaqueResult.data.length;
+
+                if (opaqueResult.data.length <= targetBytes) {
+                    return {
+                        data: opaqueResult.data,
+                        size: opaqueResult.data.length,
+                        strategy: `${opaqueResult.strategy} + 底色填充`,
+                        hasAlpha: false,
+                        alphaRemoved: true,
+                        dimensions: { width: outputWidth, height: outputHeight },
+                        format: 'png',
+                        steps
+                    };
+                }
+
+                currentCanvas = opaqueCanvas;
+            }
+
+            // Step 6: Fallback - 輕微模糊後再壓縮
+            steps.push({ step: 'fallback-blur', status: 'processing' });
+            const blurredCanvas = ImageProcessor.applyLightBlur(currentCanvas, 0.4);
+
+            const blurResult = await PNGCompressor.findOptimalColors(
+                blurredCanvas,
+                targetBytes,
+                Math.max(16, minColors - 16),
+                maxColors
+            );
+            steps[steps.length - 1].status = 'done';
+            steps[steps.length - 1].size = blurResult.data.length;
+
+            // 返回最終結果（即使超標）
+            const exceeded = blurResult.data.length > targetBytes;
+            return {
+                data: blurResult.data,
+                size: blurResult.data.length,
+                strategy: `${blurResult.strategy} + 微模糊`,
+                hasAlpha: hasAlpha && !removeAlpha,
+                exceeded,
+                exceedReason: exceeded ? this.getExceedReason(complexity, hasAlpha) : null,
+                dimensions: { width: outputWidth, height: outputHeight },
+                format: 'png',
+                steps
+            };
+        },
+
+        /**
+         * 取得超標原因說明
+         */
+        getExceedReason(complexity, hasAlpha) {
+            const reasons = [];
+            if (hasAlpha) reasons.push('透明通道增加資料量');
+            if (complexity.complexity === 'high') reasons.push('圖片色彩複雜度高');
+            reasons.push('PNG 格式物理限制');
+            return reasons.join('、');
+        },
+
+        /**
+         * 將壓縮結果轉為 Blob
+         */
+        toBlob(result) {
+            const mimeType = result.format === 'jpg' ? 'image/jpeg' : 'image/png';
+            return new Blob([result.data], { type: mimeType });
+        },
+
+        /**
+         * 將壓縮結果轉為 Data URL (預覽用)
+         */
+        toDataURL(result) {
+            const blob = this.toBlob(result);
+            return URL.createObjectURL(blob);
+        }
+    };
+
+    // ============================================================
+    // UI Controller
+    // ============================================================
+    const state = {
+        files: [],
+        results: [],
+        isProcessing: false
+    };
+
+    // DOM Elements
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const outputWidthInput = document.getElementById('outputWidth');
+    const outputHeightInput = document.getElementById('outputHeight');
+    const outputFormatSelect = document.getElementById('outputFormat');
+    const targetSizeInput = document.getElementById('targetSize');
+    const fittingModeSelect = document.getElementById('fittingMode');
+    const contentSizeInput = document.getElementById('contentSize');
+    const pngSettings = document.getElementById('pngSettings');
+    const pngQualitySettings = document.getElementById('pngQualitySettings');
+    const jpgQualitySettings = document.getElementById('jpgQualitySettings');
+    const removeAlphaCheckbox = document.getElementById('removeAlpha');
+    const bgColorInput = document.getElementById('bgColor');
+    const bgColorHex = document.getElementById('bgColorHex');
+    const jpgQualityInput = document.getElementById('jpgQuality');
+    const jpgQualityValue = document.getElementById('jpgQualityValue');
+    const jpgBgColorInput = document.getElementById('jpgBgColor');
+    const jpgBgColorHex = document.getElementById('jpgBgColorHex');
+    const qualityMinInput = document.getElementById('qualityMin');
+    const qualityMaxInput = document.getElementById('qualityMax');
+    const ditheringInput = document.getElementById('dithering');
+    const ditheringValue = document.getElementById('ditheringValue');
+    const progressSection = document.getElementById('progressSection');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const progressPercent = document.getElementById('progressPercent');
+    const resultsSection = document.getElementById('resultsSection');
+    const resultsGrid = document.getElementById('resultsGrid');
+    const statsLabel = document.getElementById('statsLabel');
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
+
+    // Event Listeners - Format Toggle
+    outputFormatSelect.addEventListener('change', () => {
+        const isPNG = outputFormatSelect.value === 'png';
+        pngSettings.classList.toggle('hidden', !isPNG);
+        pngQualitySettings.classList.toggle('hidden', !isPNG);
+        jpgQualitySettings.classList.toggle('hidden', isPNG);
+    });
+
+    // Event Listeners
+    bgColorInput.addEventListener('input', () => {
+        bgColorHex.textContent = bgColorInput.value.toUpperCase();
+    });
+
+    jpgBgColorInput.addEventListener('input', () => {
+        jpgBgColorHex.textContent = jpgBgColorInput.value.toUpperCase();
+    });
+
+    jpgQualityInput.addEventListener('input', () => {
+        jpgQualityValue.textContent = jpgQualityInput.value + '%';
+    });
+
+    ditheringInput.addEventListener('input', () => {
+        ditheringValue.textContent = (ditheringInput.value / 100).toFixed(1);
+    });
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+        dropzone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); });
+    });
+    ['dragenter', 'dragover'].forEach(evt => {
+        dropzone.addEventListener(evt, () => dropzone.classList.add('drag-active'));
+    });
+    ['dragleave', 'drop'].forEach(evt => {
+        dropzone.addEventListener(evt, () => dropzone.classList.remove('drag-active'));
+    });
+
+    dropzone.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+    fileInput.addEventListener('change', e => handleFiles(e.target.files));
+    downloadAllBtn.addEventListener('click', downloadAll);
+
+    async function handleFiles(fileList) {
+        const images = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+        if (images.length === 0) {
+            alert('請選擇有效的圖片檔案！');
+            return;
+        }
+
+        state.files = images;
+        state.results = [];
+        state.isProcessing = true;
+
+        resultsGrid.innerHTML = '';
+        resultsSection.classList.remove('hidden');
+        progressSection.classList.remove('hidden');
+
+        const options = {
+            outputWidth: parseInt(outputWidthInput.value) || 800,
+            outputHeight: parseInt(outputHeightInput.value) || 800,
+            outputFormat: outputFormatSelect.value,
+            targetKB: parseInt(targetSizeInput.value) || 300,
+            fittingMode: fittingModeSelect.value,
+            contentSize: parseInt(contentSizeInput.value) || 750,
+            removeAlpha: removeAlphaCheckbox.checked,
+            bgColor: bgColorInput.value,
+            jpgQuality: parseInt(jpgQualityInput.value) / 100,
+            jpgBgColor: jpgBgColorInput.value,
+            qualityMin: parseInt(qualityMinInput.value) || 70,
+            qualityMax: parseInt(qualityMaxInput.value) || 95,
+            dithering: parseInt(ditheringInput.value) / 100
+        };
+
+        for (let i = 0; i < images.length; i++) {
+            const file = images[i];
+            updateProgress(i, images.length, `處理中: ${file.name}`);
+
+            try {
+                const result = await CompressionPipeline.compress(file, options);
+                result.originalName = file.name;
+                result.originalSize = file.size;
+                state.results.push(result);
+                addResultCard(result, i, options.outputWidth, options.outputHeight);
+            } catch (error) {
+                console.error(`Error processing ${file.name}:`, error);
+                addErrorCard(file, error.message);
+            }
+        }
+
+        updateProgress(images.length, images.length, '處理完成！');
+        statsLabel.textContent = `${state.results.length} 張圖片`;
+        state.isProcessing = false;
+        fileInput.value = '';
+    }
+
+    function updateProgress(current, total, text) {
+        const percent = Math.round((current / total) * 100);
+        progressBar.style.width = `${percent}%`;
+        progressPercent.textContent = `${percent}%`;
+        progressText.textContent = text;
+    }
+
+    function formatBytes(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+    }
+
+    function addResultCard(result, index, outputWidth, outputHeight) {
+        const card = document.createElement('div');
+        card.className = 'glass-inset p-4';
+
+        const previewUrl = CompressionPipeline.toDataURL(result);
+        const originalKB = (result.originalSize / 1024).toFixed(1);
+        const compressedKB = (result.size / 1024).toFixed(1);
+        const reduction = ((1 - result.size / result.originalSize) * 100).toFixed(1);
+        const targetKB = parseInt(targetSizeInput.value) || 300;
+        const isSuccess = result.size <= targetKB * 1024;
+        const format = result.format || 'png';
+        const extension = format === 'jpg' ? 'jpg' : 'png';
+
+        const newName = result.originalName.replace(/\.[^.]+$/, '') + `_${outputWidth}x${outputHeight}.${extension}`;
+
+        card.innerHTML = `
+            <div class="relative mb-3">
+                <div class="checkerboard rounded-xl overflow-hidden aspect-square glass-card p-1">
+                    <img src="${previewUrl}" class="w-full h-full object-contain rounded-lg" alt="Preview">
+                </div>
+                ${result.exceeded ? `
+                    <div class="absolute top-3 right-3 glass-btn text-xs px-3 py-1 font-semibold" style="background: linear-gradient(145deg, #d4c5a8, #c9b896); color: #6b5c3d; box-shadow: 3px 3px 6px rgba(112,107,100,0.2), -3px -3px 6px rgba(255,255,255,0.4);">
+                        超標
+                    </div>
+                ` : `
+                    <div class="absolute top-3 right-3 glass-btn text-xs px-3 py-1 font-semibold" style="background: linear-gradient(145deg, #a8c5a8, #8fb88f); color: #3d5a3d; box-shadow: 3px 3px 6px rgba(112,107,100,0.2), -3px -3px 6px rgba(255,255,255,0.4);">
+                        達標
+                    </div>
+                `}
+            </div>
+            <div class="space-y-2">
+                <div class="font-semibold text-sm truncate" style="color: #706b64;" title="${newName}">${newName}</div>
+                <div class="text-xs" style="color: #a29d96;">尺寸: ${outputWidth} × ${outputHeight} px</div>
+                <div class="flex justify-between text-xs" style="color: #a29d96;">
+                    <span>原始: ${originalKB} KB</span>
+                    <span class="font-semibold" style="color: ${isSuccess ? '#6b8f6b' : '#8f7c5c'};">
+                        壓縮後: ${compressedKB} KB
+                    </span>
+                </div>
+                <div class="text-xs" style="color: #a29d96;">
+                    壓縮率: <span class="font-semibold" style="color: ${reduction > 0 ? '#6b8f6b' : '#8f5c5c'};">${reduction > 0 ? '-' : '+'}${Math.abs(reduction)}%</span>
+                </div>
+                <div class="text-xs truncate" style="color: #c4c1bc;" title="${result.strategy}">
+                    策略: ${result.strategy}
+                </div>
+                ${result.exceeded ? `
+                    <div class="glass-inset text-xs p-2" style="color: #8f7c5c;">
+                        ${result.exceedReason || '無法達到目標大小'}
+                    </div>
+                ` : ''}
+                <button onclick="downloadSingle(${index})"
+                        class="glass-btn glass-btn-primary w-full mt-3 text-sm py-2.5">
+                    下載 ${extension.toUpperCase()}
+                </button>
+            </div>
+        `;
+
+        resultsGrid.appendChild(card);
+    }
+
+    function addErrorCard(file, errorMsg) {
+        const card = document.createElement('div');
+        card.className = 'glass-inset p-4';
+        card.innerHTML = `
+            <div class="font-semibold mb-2" style="color: #8f5c5c;">${file.name}</div>
+            <div class="text-sm" style="color: #a29d96;">處理失敗: ${errorMsg}</div>
+        `;
+        resultsGrid.appendChild(card);
+    }
+
+    function downloadSingle(index) {
+        const result = state.results[index];
+        if (!result) return;
+
+        const blob = CompressionPipeline.toBlob(result);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const outputWidth = parseInt(outputWidthInput.value) || 800;
+        const outputHeight = parseInt(outputHeightInput.value) || 800;
+        const format = result.format || 'png';
+        const extension = format === 'jpg' ? 'jpg' : 'png';
+        a.href = url;
+        a.download = result.originalName.replace(/\.[^.]+$/, '') + `_${outputWidth}x${outputHeight}.${extension}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    async function downloadAll() {
+        if (state.results.length === 0) return;
+
+        downloadAllBtn.disabled = true;
+        downloadAllBtn.classList.add('glass-btn-pressed');
+        downloadAllBtn.innerHTML = `
+            <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            打包中...
+        `;
+
+        const zip = new JSZip();
+        const outputWidth = parseInt(outputWidthInput.value) || 800;
+        const outputHeight = parseInt(outputHeightInput.value) || 800;
+        const format = outputFormatSelect.value;
+        const extension = format === 'jpg' ? 'jpg' : 'png';
+        const folder = zip.folder(`images_${outputWidth}x${outputHeight}_${extension}`);
+
+        state.results.forEach((result, i) => {
+            const resultFormat = result.format || 'png';
+            const resultExt = resultFormat === 'jpg' ? 'jpg' : 'png';
+            const name = result.originalName.replace(/\.[^.]+$/, '') + `_${outputWidth}x${outputHeight}.${resultExt}`;
+            folder.file(name, result.data);
+        });
+
+        try {
+            const content = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            const extension = format === 'jpg' ? 'jpg' : 'png';
+            a.href = url;
+            a.download = `images_${outputWidth}x${outputHeight}_${extension}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('ZIP error:', err);
+            alert('打包失敗，請重試');
+        } finally {
+            downloadAllBtn.disabled = false;
+            downloadAllBtn.classList.remove('glass-btn-pressed');
+            downloadAllBtn.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                下載全部 (.zip)
+            `;
+        }
+    }
+
+    // Expose for inline onclick
+    window.downloadSingle = downloadSingle;
+
+    // ============================================================
+    // Background Toggle Function
+    // ============================================================
+    function toggleBackground() {
+        const bgBlobs = document.getElementById('bgBlobs');
+        const bgToggle = document.getElementById('bgToggle');
+
+        if (bgToggle.classList.contains('active')) {
+            bgToggle.classList.remove('active');
+            bgBlobs.classList.add('hidden');
+        } else {
+            bgToggle.classList.add('active');
+            bgBlobs.classList.remove('hidden');
+        }
+    }
+
+    // Expose for inline onclick
+    window.toggleBackground = toggleBackground;
+    </script>
+</body>
+</html>
