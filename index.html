@@ -543,10 +543,14 @@
             </h2>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <!-- Output Size (Editable) -->
+                <!-- Output Size Mode -->
                 <div>
-                    <label class="block text-sm font-medium mb-2" style="color: #a29d96;">輸出尺寸 (寬 × 高 px)</label>
-                    <div class="flex items-center gap-2">
+                    <label class="block text-sm font-medium mb-2" style="color: #a29d96;">輸出尺寸</label>
+                    <select id="outputSizeMode" class="glass-select block w-full py-2.5 pl-4 pr-10 mb-2">
+                        <option value="original">IMG Size (原圖尺寸)</option>
+                        <option value="custom">Custom Size (自定義尺寸)</option>
+                    </select>
+                    <div id="customSizeInputs" class="flex items-center gap-2 hidden">
                         <input type="number" id="outputWidth" value="800" min="100" max="4096"
                                class="glass-input block w-full py-2.5 px-4">
                         <span class="font-medium" style="color: #c4c1bc;">×</span>
@@ -578,6 +582,7 @@
                 <div>
                     <label class="block text-sm font-medium mb-2" style="color: #a29d96;">填充模式</label>
                     <select id="fittingMode" class="glass-select block w-full py-2.5 pl-4 pr-10">
+                        <option value="original">IMG Size (原圖尺寸)</option>
                         <option value="contain">Contain (留白，完整顯示)</option>
                         <option value="cover">Cover (滿版裁切)</option>
                     </select>
@@ -778,7 +783,7 @@
          * @param {ImageBitmap} img - 來源圖片
          * @param {number} outputWidth - 輸出寬度
          * @param {number} outputHeight - 輸出高度
-         * @param {string} mode - 'contain' 或 'cover'
+         * @param {string} mode - 'contain', 'cover' 或 'original'
          * @param {number} contentSize - contain 模式下的內容尺寸
          * @param {string|null} bgColor - 背景色 (null 為透明)
          */
@@ -801,7 +806,13 @@
             const srcH = img.height;
             let dx, dy, dw, dh, sx = 0, sy = 0, sw = srcW, sh = srcH;
 
-            if (mode === 'contain') {
+            if (mode === 'original') {
+                // Original: 直接繪製原圖，不做任何縮放
+                dx = 0;
+                dy = 0;
+                dw = outputWidth;
+                dh = outputHeight;
+            } else if (mode === 'contain') {
                 // Contain: 完整顯示，置中，可能留白
                 const targetArea = Math.min(contentSize, outputWidth, outputHeight);
                 const scale = Math.min(targetArea / srcW, targetArea / srcH);
@@ -929,7 +940,7 @@
         },
 
         /**
-         * PNG-24 無損壓縮
+         * PNG-24 無損壓縮 (帶超時保護)
          */
         encodeLossless(canvas) {
             const rgba = this.canvasToRGBA(canvas);
@@ -951,7 +962,7 @@
         },
 
         /**
-         * 二分搜尋最佳色數以達到目標大小
+         * 二分搜尋最佳色數以達到目標大小 (限制迭代次數)
          * @param {HTMLCanvasElement} canvas
          * @param {number} targetBytes - 目標大小 (bytes)
          * @param {number} minColors - 最小色數
@@ -960,6 +971,8 @@
         async findOptimalColors(canvas, targetBytes, minColors = 16, maxColors = 256) {
             let bestResult = null;
             let bestColors = maxColors;
+            const maxIterations = 8; // 限制最大迭代次數
+            let iterations = 0;
 
             // 先嘗試最高品質
             let result = this.encodeQuantized(canvas, maxColors);
@@ -967,11 +980,12 @@
                 return { data: result, colors: maxColors, strategy: `PNG-量化 ${maxColors}色` };
             }
 
-            // 二分搜尋
+            // 二分搜尋 (限制迭代次數)
             let low = minColors;
             let high = maxColors;
 
-            while (low <= high) {
+            while (low <= high && iterations < maxIterations) {
+                iterations++;
                 const mid = Math.floor((low + high) / 2);
                 result = this.encodeQuantized(canvas, mid);
 
@@ -1067,6 +1081,33 @@
     };
 
     // ============================================================
+    // Utility Functions
+    // ============================================================
+    /**
+     * 帶超時的 Promise 包裝器
+     */
+    function withTimeout(promise, timeoutMs, errorMessage) {
+        return Promise.race([
+            promise,
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
+            )
+        ]);
+    }
+
+    /**
+     * 檢查圖片尺寸是否過大
+     */
+    function checkImageSize(width, height, format) {
+        const pixels = width * height;
+        const maxPixels = format === 'png' ? 16000000 : 50000000; // PNG: 16MP, JPG: 50MP
+        if (pixels > maxPixels) {
+            const maxDim = Math.sqrt(maxPixels);
+            throw new Error(`圖片尺寸過大 (${width}×${height})，${format.toUpperCase()} 格式建議不超過 ${Math.round(maxDim)}×${Math.round(maxDim)} 像素`);
+        }
+    }
+
+    // ============================================================
     // Main Compression Pipeline
     // ============================================================
     const CompressionPipeline = {
@@ -1089,6 +1130,9 @@
                 jpgBgColor = '#FFFFFF',
                 dithering = 0.8
             } = options;
+
+            // 檢查圖片尺寸是否過大
+            checkImageSize(outputWidth, outputHeight, outputFormat);
 
             const targetBytes = targetKB * 1024;
             const steps = [];
@@ -1297,6 +1341,8 @@
     // DOM Elements
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('fileInput');
+    const outputSizeModeSelect = document.getElementById('outputSizeMode');
+    const customSizeInputs = document.getElementById('customSizeInputs');
     const outputWidthInput = document.getElementById('outputWidth');
     const outputHeightInput = document.getElementById('outputHeight');
     const outputFormatSelect = document.getElementById('outputFormat');
@@ -1325,6 +1371,20 @@
     const resultsGrid = document.getElementById('resultsGrid');
     const statsLabel = document.getElementById('statsLabel');
     const downloadAllBtn = document.getElementById('downloadAllBtn');
+
+    // Event Listeners - Output Size Mode Toggle
+    outputSizeModeSelect.addEventListener('change', () => {
+        const isOriginal = outputSizeModeSelect.value === 'original';
+        customSizeInputs.classList.toggle('hidden', isOriginal);
+
+        // 當選擇原圖尺寸時，填充模式自動選取 IMG Size
+        if (isOriginal) {
+            fittingModeSelect.value = 'original';
+        } else {
+            // 當選擇自定義尺寸時，填充模式改為 Contain
+            fittingModeSelect.value = 'contain';
+        }
+    });
 
     // Event Listeners - Format Toggle
     outputFormatSelect.addEventListener('change', () => {
@@ -1380,9 +1440,9 @@
         resultsSection.classList.remove('hidden');
         progressSection.classList.remove('hidden');
 
-        const options = {
-            outputWidth: parseInt(outputWidthInput.value) || 800,
-            outputHeight: parseInt(outputHeightInput.value) || 800,
+        const useOriginalSize = outputSizeModeSelect.value === 'original';
+
+        const baseOptions = {
             outputFormat: outputFormatSelect.value,
             targetKB: parseInt(targetSizeInput.value) || 300,
             fittingMode: fittingModeSelect.value,
@@ -1396,19 +1456,42 @@
             dithering: parseInt(ditheringInput.value) / 100
         };
 
+        // 設定超時時間 (根據格式不同)
+        const timeoutMs = baseOptions.outputFormat === 'png' ? 30000 : 60000; // PNG: 30秒, JPG: 60秒
+
         for (let i = 0; i < images.length; i++) {
             const file = images[i];
             updateProgress(i, images.length, `處理中: ${file.name}`);
 
             try {
-                const result = await CompressionPipeline.compress(file, options);
+                // 如果選擇原圖尺寸，先讀取圖片的原始尺寸
+                let options = { ...baseOptions };
+                if (useOriginalSize) {
+                    const img = await withTimeout(
+                        ImageProcessor.loadImage(file),
+                        10000,
+                        '圖片載入超時，請確認圖片檔案是否正常'
+                    );
+                    options.outputWidth = img.width;
+                    options.outputHeight = img.height;
+                } else {
+                    options.outputWidth = parseInt(outputWidthInput.value) || 800;
+                    options.outputHeight = parseInt(outputHeightInput.value) || 800;
+                }
+
+                // 使用超時保護執行壓縮
+                const result = await withTimeout(
+                    CompressionPipeline.compress(file, options),
+                    timeoutMs,
+                    `處理超時 (${timeoutMs/1000}秒)，圖片尺寸可能過大，建議縮小尺寸或使用 JPG 格式`
+                );
                 result.originalName = file.name;
                 result.originalSize = file.size;
                 state.results.push(result);
-                addResultCard(result, i, options.outputWidth, options.outputHeight);
+                addResultCard(result, state.results.length - 1, options.outputWidth, options.outputHeight);
             } catch (error) {
                 console.error(`Error processing ${file.name}:`, error);
-                addErrorCard(file, error.message);
+                addErrorCard(file, error.message || '處理失敗，請重試');
             }
         }
 
@@ -1446,9 +1529,12 @@
 
         const newName = result.originalName.replace(/\.[^.]+$/, '') + `_${outputWidth}x${outputHeight}.${extension}`;
 
+        // 儲存檔名到 result 物件
+        result.customFileName = newName;
+
         card.innerHTML = `
             <div class="relative mb-3">
-                <div class="checkerboard rounded-xl overflow-hidden aspect-square glass-card p-1">
+                <div class="rounded-xl overflow-hidden aspect-square glass-card p-1" style="background: transparent;">
                     <img src="${previewUrl}" class="w-full h-full object-contain rounded-lg" alt="Preview">
                 </div>
                 ${result.exceeded ? `
@@ -1462,7 +1548,11 @@
                 `}
             </div>
             <div class="space-y-2">
-                <div class="font-semibold text-sm truncate" style="color: #706b64;" title="${newName}">${newName}</div>
+                <div class="filename-display font-semibold text-sm truncate cursor-pointer"
+                     style="color: #706b64;"
+                     title="雙擊編輯檔名"
+                     data-index="${index}"
+                     ondblclick="editFileName(this, ${index})">${newName}</div>
                 <div class="text-xs" style="color: #a29d96;">尺寸: ${outputWidth} × ${outputHeight} px</div>
                 <div class="flex justify-between text-xs" style="color: #a29d96;">
                     <span>原始: ${originalKB} KB</span>
@@ -1495,10 +1585,77 @@
         const card = document.createElement('div');
         card.className = 'glass-inset p-4';
         card.innerHTML = `
-            <div class="font-semibold mb-2" style="color: #8f5c5c;">${file.name}</div>
-            <div class="text-sm" style="color: #a29d96;">處理失敗: ${errorMsg}</div>
+            <div class="relative mb-3">
+                <div class="rounded-xl overflow-hidden aspect-square glass-card p-1 flex items-center justify-center" style="background: rgba(143, 92, 92, 0.1);">
+                    <svg class="w-12 h-12" style="color: #8f5c5c;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <div class="absolute top-3 right-3 glass-btn text-xs px-3 py-1 font-semibold" style="background: linear-gradient(145deg, #d4a8a8, #c99696); color: #5c3d3d; box-shadow: 3px 3px 6px rgba(112,107,100,0.2), -3px -3px 6px rgba(255,255,255,0.4);">
+                    失敗
+                </div>
+            </div>
+            <div class="space-y-2">
+                <div class="font-semibold text-sm truncate" style="color: #8f5c5c;" title="${file.name}">${file.name}</div>
+                <div class="glass-inset text-xs p-2" style="color: #8f5c5c; word-break: break-word;">
+                    ${errorMsg}
+                </div>
+            </div>
         `;
         resultsGrid.appendChild(card);
+    }
+
+    function editFileName(element, index) {
+        const result = state.results[index];
+        if (!result) return;
+
+        const currentName = result.customFileName;
+        const format = result.format || 'png';
+        const extension = format === 'jpg' ? 'jpg' : 'png';
+
+        // 取得不含副檔名的檔名
+        const nameWithoutExt = currentName.replace(/\.[^.]+$/, '');
+
+        // 建立輸入框
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = nameWithoutExt;
+        input.className = 'glass-input w-full py-1 px-2 text-sm font-semibold';
+        input.style.color = '#706b64';
+
+        // 取代顯示元素
+        element.replaceWith(input);
+        input.focus();
+        input.select();
+
+        // 儲存變更
+        const saveChange = () => {
+            const newNameWithoutExt = input.value.trim() || nameWithoutExt;
+            const newFullName = newNameWithoutExt + '.' + extension;
+            result.customFileName = newFullName;
+
+            // 建立新的顯示元素
+            const newDisplay = document.createElement('div');
+            newDisplay.className = 'filename-display font-semibold text-sm truncate cursor-pointer';
+            newDisplay.style.color = '#706b64';
+            newDisplay.title = '雙擊編輯檔名';
+            newDisplay.dataset.index = index;
+            newDisplay.ondblclick = function() { editFileName(this, index); };
+            newDisplay.textContent = newFullName;
+
+            input.replaceWith(newDisplay);
+        };
+
+        input.addEventListener('blur', saveChange);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                input.blur();
+            } else if (e.key === 'Escape') {
+                input.value = nameWithoutExt;
+                input.blur();
+            }
+        });
     }
 
     function downloadSingle(index) {
@@ -1508,12 +1665,8 @@
         const blob = CompressionPipeline.toBlob(result);
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        const outputWidth = parseInt(outputWidthInput.value) || 800;
-        const outputHeight = parseInt(outputHeightInput.value) || 800;
-        const format = result.format || 'png';
-        const extension = format === 'jpg' ? 'jpg' : 'png';
         a.href = url;
-        a.download = result.originalName.replace(/\.[^.]+$/, '') + `_${outputWidth}x${outputHeight}.${extension}`;
+        a.download = result.customFileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -1534,26 +1687,31 @@
         `;
 
         const zip = new JSZip();
-        const outputWidth = parseInt(outputWidthInput.value) || 800;
-        const outputHeight = parseInt(outputHeightInput.value) || 800;
+        const useOriginalSize = outputSizeModeSelect.value === 'original';
         const format = outputFormatSelect.value;
         const extension = format === 'jpg' ? 'jpg' : 'png';
-        const folder = zip.folder(`images_${outputWidth}x${outputHeight}_${extension}`);
+
+        // 根據尺寸模式決定資料夾名稱
+        let folderName;
+        if (useOriginalSize) {
+            folderName = `images_original_${extension}`;
+        } else {
+            const outputWidth = parseInt(outputWidthInput.value) || 800;
+            const outputHeight = parseInt(outputHeightInput.value) || 800;
+            folderName = `images_${outputWidth}x${outputHeight}_${extension}`;
+        }
+        const folder = zip.folder(folderName);
 
         state.results.forEach((result, i) => {
-            const resultFormat = result.format || 'png';
-            const resultExt = resultFormat === 'jpg' ? 'jpg' : 'png';
-            const name = result.originalName.replace(/\.[^.]+$/, '') + `_${outputWidth}x${outputHeight}.${resultExt}`;
-            folder.file(name, result.data);
+            folder.file(result.customFileName, result.data);
         });
 
         try {
             const content = await zip.generateAsync({ type: 'blob' });
             const url = URL.createObjectURL(content);
             const a = document.createElement('a');
-            const extension = format === 'jpg' ? 'jpg' : 'png';
             a.href = url;
-            a.download = `images_${outputWidth}x${outputHeight}_${extension}.zip`;
+            a.download = `${folderName}.zip`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1575,6 +1733,7 @@
 
     // Expose for inline onclick
     window.downloadSingle = downloadSingle;
+    window.editFileName = editFileName;
 
     // ============================================================
     // Background Toggle Function
