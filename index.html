@@ -57,9 +57,9 @@
         .blob {
             position: absolute;
             border-radius: 50%;
-            filter: blur(60px);
+            filter: blur(30px);
             opacity: 0.6;
-            animation: float 20s ease-in-out infinite;
+            /* 移除動畫，改為靜態 */
         }
 
         .blob-1 {
@@ -104,7 +104,7 @@
             border: 30px solid;
             border-color: rgba(212, 165, 116, 0.4);
             filter: blur(20px);
-            animation: rotate 30s linear infinite;
+            /* 移除旋轉動畫 */
         }
 
         .ring-1 {
@@ -150,8 +150,8 @@
         /* Glassmorphism card */
         .glass-card {
             background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(7px);
+            -webkit-backdrop-filter: blur(7px);
             border-radius: 24px;
             border: 1px solid rgba(255, 255, 255, 0.3);
             box-shadow:
@@ -162,8 +162,8 @@
         /* Glassmorphism inset */
         .glass-inset {
             background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             border-radius: 16px;
             border: 1px solid rgba(255, 255, 255, 0.25);
             box-shadow:
@@ -174,8 +174,8 @@
         /* Glassmorphism button */
         .glass-btn {
             background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             border-radius: 50px;
             border: 1px solid rgba(255, 255, 255, 0.35);
             box-shadow:
@@ -234,8 +234,8 @@
         /* Glass input */
         .glass-input {
             background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.3);
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -259,8 +259,8 @@
         /* Glass select */
         .glass-select {
             background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.3);
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -280,7 +280,7 @@
             width: 24px;
             height: 24px;
             background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(4px);
             border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.35);
             cursor: pointer;
@@ -307,8 +307,8 @@
         /* Glass icon container */
         .glass-icon {
             background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.3);
             box-shadow: 0 4px 12px rgba(112, 107, 100, 0.1);
@@ -317,7 +317,7 @@
         /* Glass progress bar */
         .glass-progress-track {
             background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(4px);
             border-radius: 50px;
             border: 1px solid rgba(255, 255, 255, 0.25);
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -349,8 +349,8 @@
         /* Glass header */
         .glass-header {
             background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(7px);
+            -webkit-backdrop-filter: blur(7px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.25);
             box-shadow: 0 4px 20px rgba(112, 107, 100, 0.1);
         }
@@ -358,7 +358,7 @@
         /* Glass badge */
         .glass-badge {
             background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(4px);
             border-radius: 50px;
             border: 1px solid rgba(255, 255, 255, 0.3);
             box-shadow: 0 2px 8px rgba(112, 107, 100, 0.08);
@@ -370,7 +370,7 @@
             appearance: none;
             height: 8px;
             background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(4px);
             border-radius: 50px;
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
@@ -403,7 +403,7 @@
             border: none;
             padding: 4px;
             background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(4px);
             border: 1px solid rgba(255, 255, 255, 0.3);
             box-shadow: 0 2px 8px rgba(112, 107, 100, 0.1);
             cursor: pointer;
@@ -431,7 +431,7 @@
         /* Small glass inputs */
         .glass-input-sm {
             background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(4px);
             border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.3);
             color: #706b64;
@@ -456,7 +456,7 @@
             width: 56px;
             height: 28px;
             background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(4px);
             border-radius: 50px;
             border: 1px solid rgba(255, 255, 255, 0.3);
             cursor: pointer;
@@ -493,7 +493,7 @@
 </head>
 <body class="font-sans min-h-screen" style="color: #706b64;">
 
-    <!-- Animated Background Blobs -->
+    <!-- Animated Background Blobs (預設顯示) -->
     <div id="bgBlobs" class="bg-blobs">
         <div class="blob blob-1"></div>
         <div class="blob blob-2"></div>
@@ -521,7 +521,7 @@
             </div>
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-2">
-                    <span class="text-sm" style="color: #a29d96;">背景動畫</span>
+                    <span class="text-sm" style="color: #a29d96;">背景</span>
                     <div id="bgToggle" class="toggle-switch active" onclick="toggleBackground()"></div>
                 </div>
                 <div class="glass-badge text-sm px-4 py-2 hidden md:block" style="color: #a29d96;">圖片不上傳伺服器，完全在瀏覽器處理</div>
@@ -548,14 +548,26 @@
                     <label class="block text-sm font-medium mb-2" style="color: #a29d96;">輸出尺寸</label>
                     <select id="outputSizeMode" class="glass-select block w-full py-2.5 pl-4 pr-10 mb-2">
                         <option value="original">IMG Size (原圖尺寸)</option>
-                        <option value="custom">Custom Size (自定義尺寸)</option>
+                        <option value="custom">自定義尺寸</option>
                     </select>
-                    <div id="customSizeInputs" class="flex items-center gap-2 hidden">
-                        <input type="number" id="outputWidth" value="800" min="100" max="4096"
-                               class="glass-input block w-full py-2.5 px-4">
-                        <span class="font-medium" style="color: #c4c1bc;">×</span>
-                        <input type="number" id="outputHeight" value="800" min="100" max="4096"
-                               class="glass-input block w-full py-2.5 px-4">
+                    <!-- 自定義尺寸設定 (含等比例選項) -->
+                    <div id="customSizeInputs" class="hidden mt-2">
+                        <div class="glass-inset p-3 space-y-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm" style="color: #a29d96; min-width: 45px;">寬度:</span>
+                                <input type="number" id="outputWidth" value="800" min="100" max="4096"
+                                       class="glass-input block w-full py-2 px-3">
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm" style="color: #a29d96; min-width: 45px;">高度:</span>
+                                <input type="number" id="outputHeight" value="800" min="100" max="4096"
+                                       class="glass-input block w-full py-2 px-3">
+                            </div>
+                            <label class="flex items-center gap-2 cursor-pointer justify-center">
+                                <input type="checkbox" id="keepRatio" class="glass-checkbox w-5 h-5">
+                                <span class="text-sm" style="color: #706b64;">相對</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -582,7 +594,7 @@
                 <div>
                     <label class="block text-sm font-medium mb-2" style="color: #a29d96;">填充模式</label>
                     <select id="fittingMode" class="glass-select block w-full py-2.5 pl-4 pr-10">
-                        <option value="original">IMG Size (原圖尺寸)</option>
+                        <option value="original">original (原圖顯示)</option>
                         <option value="contain">Contain (留白，完整顯示)</option>
                         <option value="cover">Cover (滿版裁切)</option>
                     </select>
@@ -639,8 +651,8 @@
             <div id="jpgQualitySettings" class="hidden mt-6 pt-6" style="border-top: 1px solid rgba(196, 193, 188, 0.3);">
                 <div class="flex flex-wrap items-center gap-4">
                     <label class="text-sm font-medium" style="color: #a29d96;">JPG 品質：</label>
-                    <input type="range" id="jpgQuality" min="50" max="100" value="85" class="glass-range w-48">
-                    <span id="jpgQualityValue" class="glass-badge text-sm font-medium px-3 py-1" style="color: #706b64;">85%</span>
+                    <input type="range" id="jpgQuality" min="50" max="100" value="100" class="glass-range w-48">
+                    <span id="jpgQualityValue" class="glass-badge text-sm font-medium px-3 py-1" style="color: #706b64;">100%</span>
                     <div class="flex items-center gap-2">
                         <label class="text-sm" style="color: #a29d96;">背景色：</label>
                         <input type="color" id="jpgBgColor" value="#FFFFFF" class="glass-color">
@@ -1345,6 +1357,7 @@
     const customSizeInputs = document.getElementById('customSizeInputs');
     const outputWidthInput = document.getElementById('outputWidth');
     const outputHeightInput = document.getElementById('outputHeight');
+    const keepRatioCheckbox = document.getElementById('keepRatio');
     const outputFormatSelect = document.getElementById('outputFormat');
     const targetSizeInput = document.getElementById('targetSize');
     const fittingModeSelect = document.getElementById('fittingMode');
@@ -1374,15 +1387,125 @@
 
     // Event Listeners - Output Size Mode Toggle
     outputSizeModeSelect.addEventListener('change', () => {
-        const isOriginal = outputSizeModeSelect.value === 'original';
-        customSizeInputs.classList.toggle('hidden', isOriginal);
+        const mode = outputSizeModeSelect.value;
 
-        // 當選擇原圖尺寸時，填充模式自動選取 IMG Size
-        if (isOriginal) {
+        if (mode === 'custom') {
+            customSizeInputs.classList.remove('hidden');
             fittingModeSelect.value = 'original';
         } else {
-            // 當選擇自定義尺寸時，填充模式改為 Contain
-            fittingModeSelect.value = 'contain';
+            // original 模式
+            customSizeInputs.classList.add('hidden');
+            fittingModeSelect.value = 'original';
+        }
+    });
+
+    // 等比例縮放邏輯
+    let ratioLocked = null; // 'width' or 'height' - 記錄哪個欄位被鎖定
+    let originalRatio = 1; // 原始寬高比
+
+    // 更新輸入框狀態
+    function updateRatioInputs() {
+        const isRatioMode = keepRatioCheckbox.checked;
+
+        if (!isRatioMode) {
+            // 非等比模式：兩欄都可編輯
+            outputWidthInput.disabled = false;
+            outputHeightInput.disabled = false;
+            outputWidthInput.placeholder = '';
+            outputHeightInput.placeholder = '';
+            outputWidthInput.style.opacity = '1';
+            outputHeightInput.style.opacity = '1';
+            ratioLocked = null;
+        }
+    }
+
+    // 監聽相對 checkbox
+    keepRatioCheckbox.addEventListener('change', () => {
+        const isRatioMode = keepRatioCheckbox.checked;
+
+        if (isRatioMode) {
+            // 開啟等比模式時，根據目前哪個欄位有值來決定鎖定另一個
+            const widthVal = parseInt(outputWidthInput.value);
+            const heightVal = parseInt(outputHeightInput.value);
+
+            if (widthVal && heightVal) {
+                // 兩者都有值，計算比例，預設鎖定高度
+                originalRatio = widthVal / heightVal;
+                ratioLocked = 'height';
+                outputHeightInput.disabled = true;
+                outputHeightInput.value = '';
+                outputHeightInput.placeholder = '等比高';
+                outputHeightInput.style.opacity = '0.6';
+            }
+        } else {
+            updateRatioInputs();
+        }
+    });
+
+    // 監聽寬度輸入
+    outputWidthInput.addEventListener('input', () => {
+        if (keepRatioCheckbox.checked) {
+            const widthVal = parseInt(outputWidthInput.value);
+            if (widthVal) {
+                // 鎖定高度欄位
+                ratioLocked = 'height';
+                outputHeightInput.disabled = true;
+                outputHeightInput.value = '';
+                outputHeightInput.placeholder = '等比高';
+                outputHeightInput.style.opacity = '0.6';
+                // 解鎖寬度
+                outputWidthInput.disabled = false;
+                outputWidthInput.placeholder = '';
+                outputWidthInput.style.opacity = '1';
+            }
+        }
+    });
+
+    // 監聯高度輸入
+    outputHeightInput.addEventListener('input', () => {
+        if (keepRatioCheckbox.checked) {
+            const heightVal = parseInt(outputHeightInput.value);
+            if (heightVal) {
+                // 鎖定寬度欄位
+                ratioLocked = 'width';
+                outputWidthInput.disabled = true;
+                outputWidthInput.value = '';
+                outputWidthInput.placeholder = '等比寬';
+                outputWidthInput.style.opacity = '0.6';
+                // 解鎖高度
+                outputHeightInput.disabled = false;
+                outputHeightInput.placeholder = '';
+                outputHeightInput.style.opacity = '1';
+            }
+        }
+    });
+
+    // 監聽欄位 focus，切換鎖定狀態
+    outputWidthInput.addEventListener('focus', () => {
+        if (keepRatioCheckbox.checked && ratioLocked === 'width') {
+            // 使用者想編輯被鎖定的寬度，切換鎖定到高度
+            ratioLocked = 'height';
+            outputWidthInput.disabled = false;
+            outputWidthInput.placeholder = '';
+            outputWidthInput.style.opacity = '1';
+            outputHeightInput.disabled = true;
+            outputHeightInput.value = '';
+            outputHeightInput.placeholder = '等比高';
+            outputHeightInput.style.opacity = '0.6';
+        }
+    });
+
+    outputHeightInput.addEventListener('focus', () => {
+        if (keepRatioCheckbox.checked && ratioLocked === 'height') {
+            // 使用者想編輯被鎖定的高度，切換鎖定到寬度
+            ratioLocked = 'width';
+            outputHeightInput.disabled = false;
+            outputHeightInput.placeholder = '';
+            outputHeightInput.style.opacity = '1';
+            outputWidthInput.disabled = true;
+            outputWidthInput.value = '';
+            outputWidthInput.placeholder = '等比寬';
+            outputWidthInput.style.opacity = '0.6';
         }
     });
 
@@ -1440,7 +1563,10 @@
         resultsSection.classList.remove('hidden');
         progressSection.classList.remove('hidden');
 
-        const useOriginalSize = outputSizeModeSelect.value === 'original';
+        const sizeMode = outputSizeModeSelect.value; // 'original' or 'custom'
+        const isRatioMode = keepRatioCheckbox.checked;
+        const inputWidth = parseInt(outputWidthInput.value);
+        const inputHeight = parseInt(outputHeightInput.value);
 
         const baseOptions = {
             outputFormat: outputFormatSelect.value,
@@ -1464,9 +1590,11 @@
             updateProgress(i, images.length, `處理中: ${file.name}`);
 
             try {
-                // 如果選擇原圖尺寸，先讀取圖片的原始尺寸
                 let options = { ...baseOptions };
-                if (useOriginalSize) {
+
+                // 根據尺寸模式計算輸出尺寸
+                if (sizeMode === 'original') {
+                    // 原圖尺寸：使用原始尺寸
                     const img = await withTimeout(
                         ImageProcessor.loadImage(file),
                         10000,
@@ -1474,9 +1602,32 @@
                     );
                     options.outputWidth = img.width;
                     options.outputHeight = img.height;
+                } else if (sizeMode === 'custom' && isRatioMode) {
+                    // 等比例縮放模式
+                    const img = await withTimeout(
+                        ImageProcessor.loadImage(file),
+                        10000,
+                        '圖片載入超時，請確認圖片檔案是否正常'
+                    );
+                    const aspectRatio = img.width / img.height;
+
+                    if (ratioLocked === 'height' && inputWidth) {
+                        // 指定寬度，自動計算高度
+                        options.outputWidth = inputWidth;
+                        options.outputHeight = Math.round(inputWidth / aspectRatio);
+                    } else if (ratioLocked === 'width' && inputHeight) {
+                        // 指定高度，自動計算寬度
+                        options.outputHeight = inputHeight;
+                        options.outputWidth = Math.round(inputHeight * aspectRatio);
+                    } else {
+                        // 預設使用寬度
+                        options.outputWidth = inputWidth || 800;
+                        options.outputHeight = Math.round((inputWidth || 800) / aspectRatio);
+                    }
                 } else {
-                    options.outputWidth = parseInt(outputWidthInput.value) || 800;
-                    options.outputHeight = parseInt(outputHeightInput.value) || 800;
+                    // 自定義尺寸 (非等比)
+                    options.outputWidth = inputWidth || 800;
+                    options.outputHeight = inputHeight || 800;
                 }
 
                 // 使用超時保護執行壓縮
@@ -1687,18 +1838,25 @@
         `;
 
         const zip = new JSZip();
-        const useOriginalSize = outputSizeModeSelect.value === 'original';
+        const sizeMode = outputSizeModeSelect.value;
         const format = outputFormatSelect.value;
         const extension = format === 'jpg' ? 'jpg' : 'png';
 
         // 根據尺寸模式決定資料夾名稱
         let folderName;
-        if (useOriginalSize) {
+        if (sizeMode === 'original') {
             folderName = `images_original_${extension}`;
         } else {
-            const outputWidth = parseInt(outputWidthInput.value) || 800;
-            const outputHeight = parseInt(outputHeightInput.value) || 800;
-            folderName = `images_${outputWidth}x${outputHeight}_${extension}`;
+            const isRatio = keepRatioCheckbox.checked;
+            const width = parseInt(outputWidthInput.value) || 800;
+            const height = parseInt(outputHeightInput.value) || 800;
+            if (isRatio) {
+                const label = ratioLocked === 'height' ? 'w' : 'h';
+                const value = ratioLocked === 'height' ? width : height;
+                folderName = `images_ratio_${label}${value}_${extension}`;
+            } else {
+                folderName = `images_${width}x${height}_${extension}`;
+            }
         }
         const folder = zip.folder(folderName);
 
